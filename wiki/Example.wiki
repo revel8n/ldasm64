@@ -1,0 +1,68 @@
+= Example =
+
+{{{
+void test(char *fname)
+{
+	FILE			*file;
+	uint32_t		filesize;
+	uint8_t			*buffer;
+	uint32_t		offset = 0;
+	ldasm_data		ld;
+	
+	file = fopen(g_fname, "r+");
+	fseek(file, 0, SEEK_END);
+	filesize = ftell(file);
+	rewind(file);
+	buffer = (uint8_t *) malloc(filesize);
+	fread(buffer, 1, filesize, file);
+		
+    while(offset < filesize) {
+		uint32_t len,i;
+		
+		len = ldasm(&buffer[offset],&ld,1);
+		
+		for (i=offset; i<offset+len; i++)
+			printf("%02x ",buffer[i]);
+		
+		printf("- [%u]( ",len);
+		
+		printf("OP[");
+		for (i=ld.opcd_offset; i<ld.opcd_offset+ld.opcd_size; i++)
+			printf("%02x",buffer[offset+i]);
+		printf("] ");
+		
+		if (ld.flags & F_INVALID)
+			printf("- ");
+		if (ld.flags & F_PREFIX)
+			printf("P ");
+		if (ld.flags & F_REX)
+			printf("R[%02x] ",ld.rex);
+		if (ld.flags & F_MODRM)
+			printf("M[%02x] ",ld.modrm);
+		if (ld.flags & F_SIB)
+			printf("S[%02x] ",ld.sib);
+		if (ld.flags & F_DISP){
+			printf("D[");
+			for (i=ld.disp_offset+ld.disp_size-1; i>=ld.disp_offset; i--)
+				printf("%02x",buffer[offset+i]);
+			printf("] ");
+		}
+		if (ld.flags & F_IMM) {
+			printf("I[");
+			for (i=ld.imm_offset+ld.imm_size-1; i>=ld.imm_offset; i--)
+				printf("%02x",buffer[offset+i]);
+			printf("] ");
+		}
+		if (ld.flags & F_RELATIVE)
+			printf("R ");
+		
+		
+		printf(")\n");
+		
+		offset += len;
+	}
+	
+	free(buffer);
+	fclose(file);
+}
+}}}
